@@ -3,9 +3,9 @@ import torch
 import numpy as np
 import copy
 
-from pytorch_util import dict_apply
-from replay_buffer import ReplayBuffer
-from sampler import (
+from common.pytorch_util import dict_apply
+from common.replay_buffer import ReplayBuffer
+from common.sampler import (
     SequenceSampler, get_val_mask, downsample_mask)
 from normalizer import LinearNormalizer
 from base_dataset import BaseLowdimDataset

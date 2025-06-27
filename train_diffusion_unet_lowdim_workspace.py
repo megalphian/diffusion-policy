@@ -8,7 +8,6 @@ import threading
 import os
 import numpy as np
 import random
-from pusht_dataset import PushTLowdimDataset
 import wandb
 import tqdm
 from hydra import initialize, compose
@@ -22,11 +21,13 @@ from diffusers.training_utils import EMAModel
 
 # Diffusion Policy imports
 from diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
+from pusht_dataset import PushTLowdimDataset
 from base_workspace import BaseWorkspace
-from base_lowdim_policy import BaseLowdimPolicy
-from pytorch_util import dict_apply, optimizer_to
-from json_logger import JsonLogger
+from base_lowdim_runner import BaseLowdimRunner
+from common.pytorch_util import dict_apply, optimizer_to
+from common.json_logger import JsonLogger
 from base_dataset import BaseLowdimDataset
+from pusht_keypoints_runner import PushTKeypointsRunner
 from ema_model import EMAModel
 
 def load_and_evaluate_yaml(config_path, config_name):
@@ -79,12 +80,6 @@ def get_scheduler(
 
     return schedule_func(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=num_training_steps, **kwargs)
 
-class BaseLowdimRunner:
-    def __init__(self, output_dir):
-        self.output_dir = output_dir
-
-    def run(self, policy: BaseLowdimPolicy) -> Dict:
-        raise NotImplementedError()
 
 class TopKCheckpointManager:
     def __init__(self,
@@ -227,7 +222,7 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
         # env_runner = hydra.utils.instantiate(
         #     cfg.task.env_runner,
         #     output_dir=self.output_dir)
-        env_runner = BaseLowdimRunner(output_dir=self.output_dir)
+        env_runner = PushTKeypointsRunner(output_dir=self.output_dir, **cfg.task.env_runner)
         assert isinstance(env_runner, BaseLowdimRunner)
 
         # configure logging

@@ -95,8 +95,10 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         assert not (obs_as_local_cond and obs_as_global_cond)
         if pred_action_steps_only:
             assert obs_as_global_cond
-        self.model = model
-        self.noise_scheduler = noise_scheduler
+        # self.model = model
+        self.model = ConditionalUnet1D(**model)
+        # self.noise_scheduler = noise_scheduler
+        self.noise_scheduler = DDPMScheduler(**noise_scheduler)
         self.mask_generator = LowdimMaskGenerator(
             action_dim=action_dim,
             obs_dim=0 if (obs_as_local_cond or obs_as_global_cond) else obs_dim,

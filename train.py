@@ -30,7 +30,7 @@ def main(cfg: OmegaConf):
     # cls = hydra.utils.get_class(cfg._target_)
     # workspace: BaseWorkspace = cls(cfg)
 
-    if cfg.workspace == "TrainDiffusionUnetLowdimWorkspace":
+    if cfg.name == "train_diffusion_unet_lowdim":
         from train_diffusion_unet_lowdim_workspace import TrainDiffusionUnetLowdimWorkspace
         workspace = TrainDiffusionUnetLowdimWorkspace(cfg)
 
