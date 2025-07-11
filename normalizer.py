@@ -4,7 +4,7 @@ import numpy as np
 from typing import Union, Dict, Callable
 import zarr
 
-from common.pytorch_util import dict_apply
+from diffusion_policy.common.pytorch_util import dict_apply
 
 class DictOfTensorMixin(nn.Module):
     def __init__(self, params_dict=None):

@@ -20,15 +20,17 @@ from diffusers.optimization import (
 from diffusers.training_utils import EMAModel
 
 # Diffusion Policy imports
-from diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
-from pusht_dataset import PushTLowdimDataset
-from base_workspace import BaseWorkspace
-from base_lowdim_runner import BaseLowdimRunner
-from common.pytorch_util import dict_apply, optimizer_to
-from common.json_logger import JsonLogger
-from base_dataset import BaseLowdimDataset
-from pusht_keypoints_runner import PushTKeypointsRunner
-from ema_model import EMAModel
+from diffusion_policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
+from diffusion_policy.pusht_dataset import PushTLowdimDataset
+from diffusion_policy.base_workspace import BaseWorkspace
+from diffusion_policy.base_lowdim_runner import BaseLowdimRunner
+from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
+from diffusion_policy.common.json_logger import JsonLogger
+from diffusion_policy.base_dataset import BaseLowdimDataset
+from diffusion_policy.pusht_keypoints_runner import PushTKeypointsRunner
+from diffusion_policy.ema_model import EMAModel
+
+from diffusion_policy.box_delivery_dataset import BoxDeliveryLowdimDataset
 
 def load_and_evaluate_yaml(config_path, config_name):
     # Initialize Hydra with the directory containing the YAML file
@@ -183,7 +185,10 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
         # dataset = hydra.utils.instantiate(cfg.task.dataset)
         if cfg.task.dataset_target == "PushTLowdimDataset":
             dataset = PushTLowdimDataset(**cfg.task.dataset)
+        elif cfg.task.dataset_target == "BoxDeliveryLowdimDataset":
+            dataset = BoxDeliveryLowdimDataset(**cfg.task.dataset)
 
+        print(f"Dataset: {dataset}")
         assert isinstance(dataset, BaseLowdimDataset)
         train_dataloader = DataLoader(dataset, **cfg.dataloader)
         normalizer = dataset.get_normalizer()

@@ -6,10 +6,10 @@ from einops import rearrange, reduce
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 # Diffusion Policy imports
-from normalizer import LinearNormalizer
-from conditional_unet1d import ConditionalUnet1D
-from module_attr_mixin import ModuleAttrMixin
-from base_lowdim_policy import BaseLowdimPolicy
+from diffusion_policy.normalizer import LinearNormalizer
+from diffusion_policy.conditional_unet1d import ConditionalUnet1D
+from diffusion_policy.module_attr_mixin import ModuleAttrMixin
+from diffusion_policy.base_lowdim_policy import BaseLowdimPolicy
 
 
 class LowdimMaskGenerator(ModuleAttrMixin):
@@ -89,7 +89,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
             obs_as_global_cond=False,
             pred_action_steps_only=False,
             oa_step_convention=False,
-            # parameters passed to step
+            box_delivery_mode=False,  # Added flag for box delivery compatibility
             **kwargs):
         super().__init__()
         assert not (obs_as_local_cond and obs_as_global_cond)
@@ -116,6 +116,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         self.obs_as_global_cond = obs_as_global_cond
         self.pred_action_steps_only = pred_action_steps_only
         self.oa_step_convention = oa_step_convention
+        self.box_delivery_mode = box_delivery_mode
         self.kwargs = kwargs
 
         if num_inference_steps is None:
@@ -171,12 +172,23 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
 
         assert 'obs' in obs_dict
         assert 'past_action' not in obs_dict # not implemented yet
-        nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
-        B, _, Do = nobs.shape
-        To = self.n_obs_steps
-        assert Do == self.obs_dim
-        T = self.horizon
-        Da = self.action_dim
+        if self.box_delivery_mode: # TODO: probably don't need this 'mode'
+            # Handle box delivery environment-specific observation
+            obs = obs_dict['obs']
+            # obs = obs.view(obs.shape[0], -1)  # Flatten observation for box delivery
+            nobs = self.normalizer['obs'].normalize(obs)
+            B, _, Do = nobs.shape
+            To = self.n_obs_steps
+            assert Do == self.obs_dim
+            T = self.horizon
+            Da = self.action_dim
+        else:
+            nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
+            B, _, Do = nobs.shape
+            To = self.n_obs_steps
+            assert Do == self.obs_dim
+            T = self.horizon
+            Da = self.action_dim
 
         # build input
         device = self.device
