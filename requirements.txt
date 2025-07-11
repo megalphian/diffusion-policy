@@ -1,8 +1,11 @@
 # Core packages
-numpy==1.23.3
+# numpy==1.23.3
+numpy==1.26.4
 # numba==0.56.4
-numba==0.53.1
-scipy==1.9.1
+# numba==0.53.1
+numba == 0.61.0
+# scipy==1.9.1
+scipy==1.15.2
 cffi==1.15.1
 matplotlib==3.6.1
 h5py==3.7.0
@@ -57,5 +60,5 @@ robomimic==0.2.0
 pytorchvideo==0.1.5
 imagecodecs==2022.9.26
 r3m @ https://github.com/facebookresearch/r3m/archive/b2334e726887fa0206962d7984c69c5fb09cceab.tar.gz
-robosuite @ https://github.com/cheng-chi/robosuite/archive/277ab9588ad7a4f4b55cf75508b44aa67ec171f0.tar.gz
+# robosuite @ https://github.com/cheng-chi/robosuite/archive/277ab9588ad7a4f4b55cf75508b44aa67ec171f0.tar.gz
 dm-control==1.0.9

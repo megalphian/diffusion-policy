@@ -1,32 +1,24 @@
 name: boxdelivery_lowdim
 
-obs_dim: 12 # 5*2 boxes + 2 receptacle
-action_dim: 2
+obs_dim: 14  # Matches box_delivery_env's low-dim observation space
+action_dim: 2  # Matches box_delivery_env's action space
 keypoint_dim: 2
 
 dataset_target: BoxDeliveryLowdimDataset
 
 env_runner:
-  # _target_: diffusion_policy.env_runner.pusht_keypoints_runner.PushTKeypointsRunner
-  keypoint_visible_rate: ${keypoint_visible_rate}
+  # _target_: diffusion_policy.env_runner.boxdelivery_runner.BoxDeliveryRunner
   n_train: 6
-  n_train_vis: 2
-  train_start_seed: 0
   n_test: 50
-  n_test_vis: 4
-  legacy_test: True
-  test_start_seed: 100000
   max_steps: 300
   n_obs_steps: ${n_obs_steps}
   n_action_steps: ${n_action_steps}
-  n_latency_steps: ${n_latency_steps}
   fps: 10
-  agent_keypoints: False
-  past_action: ${past_action_visible}
+  past_action: false
   n_envs: null
 
 dataset:
-  # _target_: diffusion_policy.dataset.pusht_dataset.PushTLowdimDataset
+  # _target_: diffusion_policy.dataset.boxdelivery_dataset.BoxDeliveryLowdimDataset
   zarr_path: demo_data/box_delivery_demo.zarr
   horizon: ${horizon}
   pad_before: "${eval:${n_obs_steps}-1+${n_latency_steps}}"

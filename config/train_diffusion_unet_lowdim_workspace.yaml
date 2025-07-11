@@ -1,7 +1,6 @@
 defaults:
   - _self_
-  # - task: pusht_lowdim
-  - task: boxdelivery_lowdim
+  - task: boxdelivery_lowdim  # Ensure task is set to box delivery
 
 name: train_diffusion_unet_lowdim
 _target_: diffusion_policy.workspace.train_diffusion_unet_lowdim_workspace.TrainDiffusionUnetLowdimWorkspace
@@ -12,7 +11,7 @@ keypoint_dim: ${task.keypoint_dim}
 task_name: ${task.name}
 exp_name: "default"
 
-horizon: 16
+horizon: 16 # TODO: change to something reasonable
 n_obs_steps: 2
 n_action_steps: 8
 n_latency_steps: 0
@@ -63,6 +62,8 @@ policy:
   pred_action_steps_only: ${pred_action_steps_only}
   oa_step_convention: True
 
+  box_delivery_mode: true  # Added flag for box delivery compatibility
+
   # scheduler.step params
   # predict_epsilon: True
 
@@ -110,7 +111,7 @@ training:
   # in epochs
   rollout_every: 50
   checkpoint_every: 50
-  val_every: 1
+  val_every: 10
   sample_every: 5
   # steps per epoch
   max_train_steps: null
@@ -129,10 +130,13 @@ logging:
 
 checkpoint:
   topk:
-    monitor_key: test_mean_score
-    mode: max
+    # monitor_key: test_mean_score
+    # mode: max
+    monitor_key: val_loss
+    mode: min
     k: 5
-    format_str: 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt'
+    # format_str: 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt'
+    format_str: 'epoch={epoch:04d}-val_loss={val_loss:.3f}.ckpt'
   save_last_ckpt: True
   save_last_snapshot: False
 
