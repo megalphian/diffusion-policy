@@ -11,9 +11,9 @@ keypoint_dim: ${task.keypoint_dim}
 task_name: ${task.name}
 exp_name: "default"
 
-horizon: 16 # TODO: change to something reasonable
+horizon: 8
 n_obs_steps: 2
-n_action_steps: 8
+n_action_steps: 4
 n_latency_steps: 0
 past_action_visible: False
 keypoint_visible_rate: 1.0
