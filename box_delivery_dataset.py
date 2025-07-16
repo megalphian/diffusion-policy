@@ -81,12 +81,12 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
         box_and_recept = sample[self.obs_key]
         goal = sample[self.state_key]
         # agent_pos = state[:,:2]
-        print("SHAPES INCOMING:")
-        print(box_and_recept.shape, goal.shape)
+        # print("SHAPES INCOMING:")
+        # print(box_and_recept.shape, goal.shape)
         obs = np.concatenate([
             box_and_recept.reshape(box_and_recept.shape[0], -1), 
             goal], axis=-1)
-        print("OBS SHAPE:", obs.shape)
+        # print("OBS SHAPE:", obs.shape)
 
         data = {
             'obs': obs, # T, D_o
@@ -122,6 +122,12 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         sample = self.pad_sample(self.sampler.sample_sequence(idx))
+
+        # REMOVE: approximate robot position using the first action
+        approx_robot_pos = sample[self.action_key][0]
+        robot_pos_repeated = np.tile(approx_robot_pos, (sample[self.obs_key].shape[0], 1))
+        sample[self.obs_key] = np.concatenate([robot_pos_repeated, sample[self.obs_key]], axis=1)
+
         data = self._sample_to_data(sample)
 
         torch_data = dict_apply(data, torch.from_numpy)

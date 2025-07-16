@@ -1,6 +1,6 @@
 name: boxdelivery_lowdim
 
-obs_dim: 14  # Matches box_delivery_env's low-dim observation space
+obs_dim: 10  # 2 (robot) + 2 * num_boxes + 2 (receptacle) + 2 (goal)
 action_dim: 2  # Matches box_delivery_env's action space
 keypoint_dim: 2
 
