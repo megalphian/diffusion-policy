@@ -67,6 +67,14 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
 
     def get_normalizer(self, mode='limits', **kwargs):
         data = self._sample_to_data(self.replay_buffer)
+        # # REMOVE
+        # raw_data = {
+        #     self.obs_key: self.replay_buffer[self.obs_key],
+        #     self.state_key: self.replay_buffer[self.state_key],
+        #     self.action_key: self.replay_buffer[self.action_key]
+        # }
+        # data = self._sample_to_data(raw_data)
+        # # ^^ REMOVE
         normalizer = LinearNormalizer()
         normalizer.fit(data=data, last_n_dims=1, mode=mode, **kwargs)
         return normalizer
@@ -78,13 +86,18 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
         return len(self.sampler)
 
     def _sample_to_data(self, sample):
-        box_and_recept = sample[self.obs_key]
+        # REMOVE: approximate robot position using the first action
+        # approx_robot_pos = sample[self.action_key][0]
+        # robot_pos_repeated = np.tile(approx_robot_pos, (sample[self.obs_key].shape[0], 1))
+        # sample[self.obs_key] = np.concatenate([robot_pos_repeated, sample[self.obs_key]], axis=1)
+
+        state = sample[self.obs_key]
         goal = sample[self.state_key]
         # agent_pos = state[:,:2]
         # print("SHAPES INCOMING:")
         # print(box_and_recept.shape, goal.shape)
         obs = np.concatenate([
-            box_and_recept.reshape(box_and_recept.shape[0], -1), 
+            state.reshape(state.shape[0], -1), 
             goal], axis=-1)
         # print("OBS SHAPE:", obs.shape)
 
@@ -122,12 +135,6 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         sample = self.pad_sample(self.sampler.sample_sequence(idx))
-
-        # REMOVE: approximate robot position using the first action
-        approx_robot_pos = sample[self.action_key][0]
-        robot_pos_repeated = np.tile(approx_robot_pos, (sample[self.obs_key].shape[0], 1))
-        sample[self.obs_key] = np.concatenate([robot_pos_repeated, sample[self.obs_key]], axis=1)
-
         data = self._sample_to_data(sample)
 
         torch_data = dict_apply(data, torch.from_numpy)
