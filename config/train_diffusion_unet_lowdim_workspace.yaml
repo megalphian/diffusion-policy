@@ -118,6 +118,7 @@ training:
   max_val_steps: null
   # misc
   tqdm_interval_sec: 1.0
+  job_id: null
 
 logging:
   project: diffusion_policy_debug

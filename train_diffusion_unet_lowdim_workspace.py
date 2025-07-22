@@ -243,10 +243,15 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
         )
 
         # configure checkpoint
+        # topk_manager = TopKCheckpointManager(
+        #     save_dir=os.path.join(self.output_dir, 'checkpoints'),
+        #     **cfg.checkpoint.topk
+        # )
         topk_manager = TopKCheckpointManager(
-            save_dir=os.path.join(self.output_dir, 'checkpoints'),
+            save_dir=os.path.join('PositionDiffusionPolicy/checkpoint/', str(self.cfg.training.job_id)),
             **cfg.checkpoint.topk
         )
+
 
         # device transfer
         device = torch.device(cfg.training.device)
