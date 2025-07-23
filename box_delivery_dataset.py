@@ -37,7 +37,7 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
             mask=train_mask, 
             max_n=max_train_episodes, 
             seed=seed)
-
+       
         self.sampler = SequenceSampler(
             replay_buffer=self.replay_buffer, 
             sequence_length=horizon,
@@ -45,6 +45,7 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
             pad_after=pad_after,
             episode_mask=train_mask
             )
+        
         self.obs_key = obs_key
         self.state_key = state_key
         self.action_key = action_key
@@ -106,35 +107,10 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
             'action': sample[self.action_key], # T, D_a
         }
         return data
-
-    def pad_sample(self, sample):
-        # extract sequences
-        obs = sample[self.obs_key]          # T, D_o
-        action = sample[self.action_key]    # T, D_a
-        state = sample[self.state_key]      # T, D_s
-
-        T = obs.shape[0]
-        pad_len = max(0, self.horizon - T)
-        
-        if pad_len > 0:
-            # repeat last element pad_len times
-            pad_obs = np.repeat(obs[-1:], pad_len, axis=0)
-            pad_action = np.repeat(action[-1:], pad_len, axis=0)
-            pad_state = np.repeat(state[-1:], pad_len, axis=0)
-
-            # concatenate
-            obs = np.concatenate([obs, pad_obs], axis=0)
-            action = np.concatenate([action, pad_action], axis=0)
-            state = np.concatenate([state, pad_state], axis=0)
-
-            sample[self.obs_key] = obs
-            sample[self.action_key] = action
-            sample[self.state_key] = state
-
-        return sample
-
+    
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        sample = self.pad_sample(self.sampler.sample_sequence(idx))
+        sample = self.sampler.sample_sequence(idx)
+
         data = self._sample_to_data(sample)
 
         torch_data = dict_apply(data, torch.from_numpy)
