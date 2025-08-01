@@ -19,6 +19,7 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
             obs_key='state_positions',
             state_key='goal',
             action_key='action',
+            mask_key='valid_obs_mask',
             seed=42,
             val_ratio=0.0,
             max_train_episodes=None
@@ -26,7 +27,7 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
         super().__init__()
         # TODO: FIND OUT HOW obs_key IS USED
         self.replay_buffer = ReplayBuffer.copy_from_path(
-            zarr_path, keys=[obs_key, state_key, action_key])
+            zarr_path, keys=[obs_key, state_key, action_key, mask_key])
 
         val_mask = get_val_mask(
             n_episodes=self.replay_buffer.n_episodes, 

@@ -8,6 +8,7 @@ from common.replay_buffer import ReplayBuffer
 def create_indices(
     episode_ends:np.ndarray, sequence_length:int, 
     episode_mask: np.ndarray,
+    valid_obs_mask: Optional[np.ndarray]=None,
     pad_before: int=0, pad_after: int=0,
     debug:bool=True) -> np.ndarray:
     episode_mask.shape == episode_ends.shape        
@@ -30,6 +31,9 @@ def create_indices(
         
         # range stops one idx before end
         for idx in range(min_start, max_start+1):
+            if valid_obs_mask is not None and not valid_obs_mask[start_idx + idx]:
+                # skip if observation is not valid
+                continue
             buffer_start_idx = max(idx, 0) + start_idx
             buffer_end_idx = min(idx+sequence_length, episode_length) + start_idx
             start_offset = buffer_start_idx - (idx+start_idx)
@@ -95,6 +99,7 @@ class SequenceSampler:
             keys = list(replay_buffer.keys())
         
         episode_ends = replay_buffer.episode_ends[:]
+        valid_obs_mask = replay_buffer['valid_obs_mask'] if 'valid_obs_mask' in replay_buffer.keys() else None
         if episode_mask is None:
             episode_mask = np.ones(episode_ends.shape, dtype=bool)
 
@@ -103,7 +108,8 @@ class SequenceSampler:
                 sequence_length=sequence_length, 
                 pad_before=pad_before, 
                 pad_after=pad_after,
-                episode_mask=episode_mask
+                episode_mask=episode_mask,
+                valid_obs_mask=valid_obs_mask
                 )
         else:
             indices = np.zeros((0,4), dtype=np.int64)
