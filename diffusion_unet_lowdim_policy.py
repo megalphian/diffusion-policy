@@ -89,6 +89,8 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
             obs_as_global_cond=False,
             pred_action_steps_only=False,
             oa_step_convention=False,
+            condition_trajectory=False,
+            env=None,
             **kwargs):
         super().__init__()
         assert not (obs_as_local_cond and obs_as_global_cond)
@@ -115,12 +117,13 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         self.obs_as_global_cond = obs_as_global_cond
         self.pred_action_steps_only = pred_action_steps_only
         self.oa_step_convention = oa_step_convention
+        self.condition_trajectory = condition_trajectory
+        self.env = env
         self.kwargs = kwargs
 
         if num_inference_steps is None:
             num_inference_steps = noise_scheduler.config.num_train_timesteps
         self.num_inference_steps = num_inference_steps
-    
     # ========= inference  ============
     def conditional_sample(self, 
             condition_data, condition_mask,
@@ -144,6 +147,11 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         for t in scheduler.timesteps:
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
+            if self.condition_trajectory and self.env is not None:
+                # conditition trajectory to stay in valid configuration space
+                unnormalized_trajectory = self.normalizer['action'].unnormalize(trajectory[~condition_mask])
+                unnormalized_trajectory = self.env.ensure_valid_trajectory(unnormalized_trajectory)
+                trajectory[~condition_mask] = self.normalizer['action'].normalize(unnormalized_trajectory)
 
             # 2. predict model output
             model_output = model(trajectory, t, 
@@ -157,7 +165,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
                 ).prev_sample
         
         # finally make sure conditioning is enforced
-        trajectory[condition_mask] = condition_data[condition_mask]        
+        trajectory[condition_mask] = condition_data[condition_mask]
 
         return trajectory
 
@@ -201,6 +209,17 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
                 shape = (B, self.n_action_steps, Da)
             cond_data = torch.zeros(size=shape, device=device, dtype=dtype)
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
+            if self.condition_trajectory:
+                # condition trajectory with current robot position and goal position
+                start_position = self.normalizer['action'].normalize(
+                    obs_dict['obs'][:, To-1, :2])
+                goal_position = self.normalizer['action'].normalize(
+                    obs_dict['obs'][:, To-1, -2:])
+                # fill in the first and last position
+                cond_data[:, 0, :2] = start_position
+                cond_data[:, -1, -2:] = goal_position
+                cond_mask[:, 0, :2] = True
+                cond_mask[:, -1, -2:] = True
         else:
             # condition through impainting
             shape = (B, T, Da+Do)
