@@ -167,6 +167,9 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         # finally make sure conditioning is enforced
         trajectory[condition_mask] = condition_data[condition_mask]
 
+        if self.condition_trajectory and self.env is not None:
+            trajectory = self.env.prune_by_distance(trajectory)
+
         return trajectory
 
 
