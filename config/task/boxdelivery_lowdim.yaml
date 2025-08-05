@@ -20,7 +20,7 @@ env_runner:
 dataset:
   # _target_: diffusion_policy.dataset.boxdelivery_dataset.BoxDeliveryLowdimDataset
   # zarr_path: demo_data/box_delivery_demo.zarr
-  zarr_path: demo_data/box_delivery_expert_demo.zarr
+  zarr_path: demo_data/box_delivery_expert_demo_10b.zarr
   horizon: ${horizon}
   pad_before: "${eval:${n_obs_steps}-1+${n_latency_steps}}"
   pad_after: "${eval:${n_action_steps}-1}"
