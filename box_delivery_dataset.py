@@ -69,14 +69,6 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
 
     def get_normalizer(self, mode='limits', **kwargs):
         data = self._sample_to_data(self.replay_buffer)
-        # # REMOVE
-        # raw_data = {
-        #     self.obs_key: self.replay_buffer[self.obs_key],
-        #     self.state_key: self.replay_buffer[self.state_key],
-        #     self.action_key: self.replay_buffer[self.action_key]
-        # }
-        # data = self._sample_to_data(raw_data)
-        # # ^^ REMOVE
         normalizer = LinearNormalizer()
         normalizer.fit(data=data, last_n_dims=1, mode=mode, **kwargs)
         return normalizer
@@ -88,20 +80,19 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
         return len(self.sampler)
 
     def _sample_to_data(self, sample):
-        # REMOVE: approximate robot position using the first action
-        # approx_robot_pos = sample[self.action_key][0]
-        # robot_pos_repeated = np.tile(approx_robot_pos, (sample[self.obs_key].shape[0], 1))
-        # sample[self.obs_key] = np.concatenate([robot_pos_repeated, sample[self.obs_key]], axis=1)
-
         state = sample[self.obs_key]
         goal = sample[self.state_key]
-        # agent_pos = state[:,:2]
-        # print("SHAPES INCOMING:")
-        # print(box_and_recept.shape, goal.shape)
+        
+        # only take closest two boxes of the state
+        # TODO: not necessary after next set of demos are recorded
+        #       since only two boxes will be tracked
+        state_closest_two = np.zeros([state.shape[0], 8])
+        state_closest_two[:, 0:6] = state[:, 0:6]
+        state_closest_two[:, -2:] = state[:, -2:]
         obs = np.concatenate([
-            state.reshape(state.shape[0], -1), 
+            # state.reshape(state.shape[0], -1), # FIXME: uncomment after
+            state_closest_two.reshape(state_closest_two.shape[0], -1), 
             goal], axis=-1)
-        # print("OBS SHAPE:", obs.shape)
 
         data = {
             'obs': obs, # T, D_o
