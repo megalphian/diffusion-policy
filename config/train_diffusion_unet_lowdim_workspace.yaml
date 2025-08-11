@@ -99,6 +99,8 @@ training:
   seed: 42
   debug: False
   resume: True
+  start_from_pretrained: False
+  pretrained_model_path: "PositionDiffusionPolicy/checkpoint/18779588/epoch=0550-val_loss=0.012.ckpt"
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500

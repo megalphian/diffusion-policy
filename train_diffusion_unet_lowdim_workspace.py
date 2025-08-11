@@ -175,11 +175,16 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
 
         # resume training
         if cfg.training.resume:
-            lastest_ckpt_path = self.get_checkpoint_path()
+            if cfg.training.start_from_pretrained:
+                lastest_ckpt_path = pathlib.Path(cfg.training.pretrained_model_path)
+            else:
+                lastest_ckpt_path = self.get_checkpoint_path()
+
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
-
+            else:
+                print("No checkpoint found, starting from scratch.")
         # configure dataset
         dataset: BaseLowdimDataset
         # dataset = hydra.utils.instantiate(cfg.task.dataset)
