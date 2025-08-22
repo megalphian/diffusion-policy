@@ -183,6 +183,12 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
+
+                # Reset training state when starting from pretrained model
+                if cfg.training.start_from_pretrained:
+                    print("Starting from pretrained model, resetting training state.")
+                    self.epoch = 0
+                    self.global_step = 0
             else:
                 print("No checkpoint found, starting from scratch.")
         # configure dataset
