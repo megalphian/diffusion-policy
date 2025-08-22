@@ -83,20 +83,8 @@ class BoxDeliveryLowdimDataset(BaseLowdimDataset):
         state = sample[self.obs_key]
         goal = sample[self.state_key]
         
-        # only take closest two boxes of the state
-        # TODO: not necessary after next set of demos are recorded
-        #       since only two boxes will be tracked
-        if self.obs_key == 'state_positions':
-            state_closest_two = np.zeros([state.shape[0], 8])
-            state_closest_two[:, 0:6] = state[:, 0:6]
-            state_closest_two[:, -2:] = state[:, -2:]
-        elif self.obs_key == 'state_vertices':
-            state_closest_two = np.zeros([state.shape[0], 32])
-            state_closest_two[:, 0:24] = state[:, 0:24]
-            state_closest_two[:, -8:] = state[:, -8:]
         obs = np.concatenate([
-            # state.reshape(state.shape[0], -1), # FIXME: uncomment after
-            state_closest_two.reshape(state_closest_two.shape[0], -1), 
+            state.reshape(state.shape[0], -1),
             goal], axis=-1)
 
         data = {

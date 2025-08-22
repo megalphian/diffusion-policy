@@ -100,7 +100,7 @@ training:
   debug: False
   resume: True
   start_from_pretrained: False
-  pretrained_model_path: "PositionDiffusionPolicy/checkpoint/18779588/epoch=0550-val_loss=0.012.ckpt"
+  pretrained_model_path: "PositionDiffusionPolicy/checkpoint/497097/epoch=0900-val_loss=0.014.ckpt"
   # optimization
   lr_scheduler: cosine
   lr_warmup_steps: 500
