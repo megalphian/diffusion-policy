@@ -148,10 +148,9 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
             if self.condition_trajectory and self.env is not None:
-                # conditition trajectory to stay in valid configuration space
-                unnormalized_trajectory = self.normalizer['action'].unnormalize(trajectory[~condition_mask])
+                unnormalized_trajectory = self.normalizer['action'].unnormalize(trajectory)
+                # unnormalized_trajectory[~condition_mask] = self.env.ensure_valid_trajectory(unnormalized_trajectory[~condition_mask])
                 unnormalized_trajectory = self.env.ensure_valid_trajectory(unnormalized_trajectory)
-                trajectory[~condition_mask] = self.normalizer['action'].normalize(unnormalized_trajectory)
 
             # 2. predict model output
             model_output = model(trajectory, t, 
@@ -166,9 +165,20 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         
         # finally make sure conditioning is enforced
         trajectory[condition_mask] = condition_data[condition_mask]
-
         if self.condition_trajectory and self.env is not None:
-            trajectory = self.env.prune_by_distance(trajectory)
+            # condition trajectory to stay in valid configuration space
+            unnormalized_trajectory = self.normalizer['action'].unnormalize(trajectory)
+
+            # valid_trajectory1 = self.env.ensure_valid_trajectory(unnormalized_trajectory)
+            # pruned_trajectory = self.env.prune_by_distance(valid_trajectory1)
+            waypoints_feasible = self.env.ensure_valid_trajectory(unnormalized_trajectory, path_feasibility=False) # TODO: make sure this is correct
+            pruned_trajectory = self.env.prune_by_distance(waypoints_feasible)
+            path_feasible = self.env.ensure_valid_trajectory(pruned_trajectory, path_feasibility=True)
+            # valid_trajectory = self.env.ensure_valid_trajectory(pruned_trajectory)
+            trajectory = self.normalizer['action'].normalize(path_feasible)
+
+            # pruned_trajectory = self.env.prune_by_distance(valid_trajectory)
+            # trajectory = self.normalizer['action'].normalize(pruned_trajectory)
 
         return trajectory
 
@@ -215,7 +225,8 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
             if self.condition_trajectory:
                 # condition trajectory with current robot position and goal position
                 start_position = self.normalizer['action'].normalize(
-                    obs_dict['obs'][:, To-1, :2])
+                    # obs_dict['obs'][:, To-1, :2])
+                    torch.tensor(self.env.robot.body.position))
                 goal_position = self.normalizer['action'].normalize(
                     obs_dict['obs'][:, To-1, -2:])
                 # fill in the first and last position
