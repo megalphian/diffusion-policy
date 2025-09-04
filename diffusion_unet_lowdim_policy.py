@@ -147,10 +147,11 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         for t in scheduler.timesteps:
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
-            if self.condition_trajectory and self.env is not None:
-                unnormalized_trajectory = self.normalizer['action'].unnormalize(trajectory)
-                # unnormalized_trajectory[~condition_mask] = self.env.ensure_valid_trajectory(unnormalized_trajectory[~condition_mask])
-                unnormalized_trajectory = self.env.ensure_valid_trajectory(unnormalized_trajectory)
+            # if self.condition_trajectory and self.env is not None:
+            #     unnormalized_trajectory = self.normalizer['action'].unnormalize(trajectory)
+            #     # unnormalized_trajectory[~condition_mask] = self.env.ensure_valid_trajectory(unnormalized_trajectory[~condition_mask])
+            #     unnormalized_trajectory = self.env.ensure_valid_trajectory(unnormalized_trajectory)
+            #     trajectory = self.normalizer['action'].normalize(unnormalized_trajectory)
 
             # 2. predict model output
             model_output = model(trajectory, t, 
@@ -169,16 +170,13 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
             # condition trajectory to stay in valid configuration space
             unnormalized_trajectory = self.normalizer['action'].unnormalize(trajectory)
 
-            # valid_trajectory1 = self.env.ensure_valid_trajectory(unnormalized_trajectory)
-            # pruned_trajectory = self.env.prune_by_distance(valid_trajectory1)
-            waypoints_feasible = self.env.ensure_valid_trajectory(unnormalized_trajectory, path_feasibility=False) # TODO: make sure this is correct
-            pruned_trajectory = self.env.prune_by_distance(waypoints_feasible)
-            path_feasible = self.env.ensure_valid_trajectory(pruned_trajectory, path_feasibility=True)
-            # valid_trajectory = self.env.ensure_valid_trajectory(pruned_trajectory)
-            trajectory = self.normalizer['action'].normalize(path_feasible)
+            waypoints_feasible = self.env.ensure_valid_trajectory(unnormalized_trajectory, path_feasibility=False)
 
-            # pruned_trajectory = self.env.prune_by_distance(valid_trajectory)
-            # trajectory = self.normalizer['action'].normalize(pruned_trajectory)
+            pruned_trajectory = self.env.prune_by_distance(waypoints_feasible)
+
+            waypoints_feasible2 = self.env.ensure_valid_trajectory(pruned_trajectory, path_feasibility=True)
+
+            trajectory = self.normalizer['action'].normalize(waypoints_feasible2)
 
         return trajectory
 
