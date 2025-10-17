@@ -5,7 +5,7 @@ import pymunk
 import pygame
 from matplotlib import cm
 import cv2
-from env.pusht.pymunk_override import DrawOptions
+from diffusion_policy.env.pusht.pymunk_override import DrawOptions
 
 
 def farthest_point_sampling(points: np.ndarray, n_points: int, init_idx: int):

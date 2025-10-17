@@ -2,8 +2,8 @@ from typing import Dict
 import torch
 import torch.nn as nn
 
-from module_attr_mixin import ModuleAttrMixin
-from normalizer import LinearNormalizer
+from diffusion_policy.module_attr_mixin import ModuleAttrMixin
+from diffusion_policy.normalizer import LinearNormalizer
 
 class BaseLowdimPolicy(ModuleAttrMixin):  
     # ========= inference  ============

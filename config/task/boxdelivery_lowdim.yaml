@@ -23,7 +23,7 @@ env_runner:
 
 dataset:
   # _target_: diffusion_policy.dataset.boxdelivery_dataset.BoxDeliveryLowdimDataset
-  zarr_path: demo_data/box_delivery_teleop_demo_le.zarr
+  zarr_path: demo_data/box_delivery_best_teleop_demo_se.zarr
   # zarr_path: demo_data/box_delivery_expert_demo_sc.zarr
   # zarr_path: demo_data/box_delivery_expert_demo_10b.zarr
   horizon: ${horizon}
