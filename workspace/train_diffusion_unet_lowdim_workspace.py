@@ -31,6 +31,7 @@ from diffusion_policy.runner.pusht_keypoints_runner import PushTKeypointsRunner
 from diffusion_policy.util.ema_model import EMAModel
 
 from diffusion_policy.dataset.box_delivery_dataset import BoxDeliveryLowdimDataset
+from diffusion_policy.dataset.coverage_dataset import CoverageDataset
 
 def load_and_evaluate_yaml(config_path, config_name):
     # Initialize Hydra with the directory containing the YAML file
@@ -198,6 +199,8 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
             dataset = PushTLowdimDataset(**cfg.task.dataset)
         elif cfg.task.dataset_target == "BoxDeliveryLowdimDataset":
             dataset = BoxDeliveryLowdimDataset(**cfg.task.dataset)
+        elif cfg.task.dataset_target == "CoverageDataset":
+            dataset = CoverageDataset(**cfg.task.dataset)
 
         print(f"Dataset: {dataset}")
         assert isinstance(dataset, BaseLowdimDataset)

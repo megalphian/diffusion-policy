@@ -1,0 +1,17 @@
+name: coverage_lowdim
+
+obs_dim: 10          # Your observation dimension
+action_dim: 3        # Your action dimension
+keypoint_dim: 2      # If using keypoints
+
+dataset_target: CoverageDataset
+
+dataset:
+  zarr_path: data/my_demos.zarr
+  horizon: ${horizon}
+  pad_before: "${eval:${n_obs_steps}-1}"
+  pad_after: "${eval:${n_action_steps}-1}"
+  seed: 42
+  val_ratio: 0.1
+  obs_key: 'observations'
+  action_key: 'actions'

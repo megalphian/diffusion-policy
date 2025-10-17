@@ -1,6 +1,7 @@
 defaults:
   - _self_
-  - task: boxdelivery_lowdim  # Ensure task is set to box delivery
+  # - task: boxdelivery_lowdim  # Ensure task is set to box delivery
+  - task: coverage_lowdim # Ensure task is set to coverage
 
 name: train_diffusion_unet_lowdim
 _target_: diffusion_policy.workspace.train_diffusion_unet_lowdim_workspace.TrainDiffusionUnetLowdimWorkspace
