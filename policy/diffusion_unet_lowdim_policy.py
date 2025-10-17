@@ -6,10 +6,12 @@ from einops import rearrange, reduce
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 # Diffusion Policy imports
-from diffusion_policy.normalizer import LinearNormalizer
-from diffusion_policy.conditional_unet1d import ConditionalUnet1D
-from diffusion_policy.module_attr_mixin import ModuleAttrMixin
-from diffusion_policy.base_lowdim_policy import BaseLowdimPolicy
+from diffusion_policy.util.normalizer import LinearNormalizer
+from diffusion_policy.util.module_attr_mixin import ModuleAttrMixin
+
+from diffusion_policy.model.conditional_unet1d import ConditionalUnet1D
+
+from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
 
 
 class LowdimMaskGenerator(ModuleAttrMixin):

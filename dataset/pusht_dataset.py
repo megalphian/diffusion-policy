@@ -3,12 +3,12 @@ import torch
 import numpy as np
 import copy
 
-from common.pytorch_util import dict_apply
-from common.replay_buffer import ReplayBuffer
-from common.sampler import (
+from diffusion_policy.common.pytorch_util import dict_apply
+from diffusion_policy.common.replay_buffer import ReplayBuffer
+from diffusion_policy.common.sampler import (
     SequenceSampler, get_val_mask, downsample_mask)
-from normalizer import LinearNormalizer
-from base_dataset import BaseLowdimDataset
+from diffusion_policy.util.normalizer import LinearNormalizer
+from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
 
 class PushTLowdimDataset(BaseLowdimDataset):
     def __init__(self, 

@@ -1,5 +1,5 @@
 from typing import Dict
-from base_lowdim_policy import BaseLowdimPolicy
+from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
 
 class BaseLowdimRunner:
     def __init__(self, output_dir):

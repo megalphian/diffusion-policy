@@ -20,17 +20,17 @@ from diffusers.optimization import (
 from diffusers.training_utils import EMAModel
 
 # Diffusion Policy imports
-from diffusion_policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
-from diffusion_policy.pusht_dataset import PushTLowdimDataset
-from diffusion_policy.base_workspace import BaseWorkspace
-from diffusion_policy.base_lowdim_runner import BaseLowdimRunner
+from diffusion_policy.policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
+from diffusion_policy.dataset.pusht_dataset import PushTLowdimDataset
+from diffusion_policy.workspace.base_workspace import BaseWorkspace
+from diffusion_policy.runner.base_lowdim_runner import BaseLowdimRunner
 from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
 from diffusion_policy.common.json_logger import JsonLogger
-from diffusion_policy.base_dataset import BaseLowdimDataset
-from diffusion_policy.pusht_keypoints_runner import PushTKeypointsRunner
-from diffusion_policy.ema_model import EMAModel
+from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
+from diffusion_policy.runner.pusht_keypoints_runner import PushTKeypointsRunner
+from diffusion_policy.util.ema_model import EMAModel
 
-from diffusion_policy.box_delivery_dataset import BoxDeliveryLowdimDataset
+from diffusion_policy.dataset.box_delivery_dataset import BoxDeliveryLowdimDataset
 
 def load_and_evaluate_yaml(config_path, config_name):
     # Initialize Hydra with the directory containing the YAML file
