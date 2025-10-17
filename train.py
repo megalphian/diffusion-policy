@@ -12,7 +12,7 @@ sys.stderr = open(sys.stderr.fileno(), mode='w', buffering=1)
 import hydra
 from omegaconf import OmegaConf
 import pathlib
-from diffusion_policy.base_workspace import BaseWorkspace
+from diffusion_policy.workspace.base_workspace import BaseWorkspace
 
 # allows arbitrary python code execution in configs using the ${eval:''} resolver
 OmegaConf.register_new_resolver("eval", eval, replace=True)
@@ -31,7 +31,7 @@ def main(cfg: OmegaConf):
     # workspace: BaseWorkspace = cls(cfg)
 
     if cfg.name == "train_diffusion_unet_lowdim":
-        from diffusion_policy.train_diffusion_unet_lowdim_workspace import TrainDiffusionUnetLowdimWorkspace
+        from diffusion_policy.workspace.train_diffusion_unet_lowdim_workspace import TrainDiffusionUnetLowdimWorkspace
         workspace = TrainDiffusionUnetLowdimWorkspace(cfg)
 
     workspace.run()

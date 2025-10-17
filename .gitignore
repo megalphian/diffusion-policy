@@ -4,3 +4,8 @@ venv/
 *.egg-info/
 data/
 outputs/
+
+__MACOSX/
+.DS_Store
+
+*.zip

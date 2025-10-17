@@ -14,9 +14,9 @@ from diffusion_policy.gym_util.async_vector_env import AsyncVectorEnv
 from diffusion_policy.gym_util.multistep_wrapper import MultiStepWrapper
 from diffusion_policy.gym_util.video_recording_wrapper import VideoRecordingWrapper, VideoRecorder
 
-from diffusion_policy.base_lowdim_policy import BaseLowdimPolicy
+from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
 from diffusion_policy.common.pytorch_util import dict_apply
-from diffusion_policy.base_lowdim_runner import BaseLowdimRunner
+from diffusion_policy.runner.base_lowdim_runner import BaseLowdimRunner
 
 class PushTKeypointsRunner(BaseLowdimRunner):
     def __init__(self,
