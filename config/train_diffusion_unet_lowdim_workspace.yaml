@@ -142,6 +142,8 @@ checkpoint:
     format_str: 'epoch={epoch:04d}-val_loss={val_loss:.3f}.ckpt'
   save_last_ckpt: True
   save_last_snapshot: False
+  # default location to store checkpoints (can be overridden)
+  save_dir: PositionDiffusionPolicy/checkpoint
 
 multi_run:
   run_dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}

@@ -5,77 +5,10 @@ import torch.nn.functional as F
 from einops import rearrange, reduce
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
-# Diffusion Policy imports
 from diffusion_policy.util.normalizer import LinearNormalizer
-from diffusion_policy.util.module_attr_mixin import ModuleAttrMixin
-
-from diffusion_policy.model.conditional_unet1d import ConditionalUnet1D
-
 from diffusion_policy.policy.base_lowdim_policy import BaseLowdimPolicy
-
-
-class LowdimMaskGenerator(ModuleAttrMixin):
-    def __init__(self,
-        action_dim, obs_dim,
-        # obs mask setup
-        max_n_obs_steps=2, 
-        fix_obs_steps=True, 
-        # action mask
-        action_visible=False
-        ):
-        super().__init__()
-        self.action_dim = action_dim
-        self.obs_dim = obs_dim
-        self.max_n_obs_steps = max_n_obs_steps
-        self.fix_obs_steps = fix_obs_steps
-        self.action_visible = action_visible
-
-    @torch.no_grad()
-    def forward(self, shape, seed=None):
-        device = self.device
-        B, T, D = shape
-        assert D == (self.action_dim + self.obs_dim)
-
-        # create all tensors on this device
-        rng = torch.Generator(device=device)
-        if seed is not None:
-            rng = rng.manual_seed(seed)
-
-        # generate dim mask
-        dim_mask = torch.zeros(size=shape, 
-            dtype=torch.bool, device=device)
-        is_action_dim = dim_mask.clone()
-        is_action_dim[...,:self.action_dim] = True
-        is_obs_dim = ~is_action_dim
-
-        # generate obs mask
-        if self.fix_obs_steps:
-            obs_steps = torch.full((B,), 
-            fill_value=self.max_n_obs_steps, device=device)
-        else:
-            obs_steps = torch.randint(
-                low=1, high=self.max_n_obs_steps+1, 
-                size=(B,), generator=rng, device=device)
-            
-        steps = torch.arange(0, T, device=device).reshape(1,T).expand(B,T)
-        obs_mask = (steps.T < obs_steps).T.reshape(B,T,1).expand(B,T,D)
-        obs_mask = obs_mask & is_obs_dim
-
-        # generate action mask
-        if self.action_visible:
-            action_steps = torch.maximum(
-                obs_steps - 1, 
-                torch.tensor(0,
-                    dtype=obs_steps.dtype, 
-                    device=obs_steps.device))
-            action_mask = (steps.T < action_steps).T.reshape(B,T,1).expand(B,T,D)
-            action_mask = action_mask & is_action_dim
-
-        mask = obs_mask
-        if self.action_visible:
-            mask = mask | action_mask
-        
-        return mask
+from diffusion_policy.model.conditional_unet1d import ConditionalUnet1D
+from diffusion_policy.model.common.mask_generator import LowdimMaskGenerator
 
 class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
     def __init__(self, 
@@ -98,22 +31,8 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         assert not (obs_as_local_cond and obs_as_global_cond)
         if pred_action_steps_only:
             assert obs_as_global_cond
-        # model may be passed as either a constructed ConditionalUnet1D (or nn.Module)
-        # or as a mapping of kwargs to construct one. Handle both cases.
-        if isinstance(model, ConditionalUnet1D) or isinstance(model, nn.Module):
-            self.model = model
-        elif isinstance(model, dict):
-            self.model = ConditionalUnet1D(**model)
-        else:
-            raise TypeError(f"model must be a ConditionalUnet1D/nn.Module or a dict of kwargs, got {type(model)}")
-
-        # noise_scheduler may also be provided as an instance or a mapping
-        if isinstance(noise_scheduler, DDPMScheduler):
-            self.noise_scheduler = noise_scheduler
-        elif isinstance(noise_scheduler, dict):
-            self.noise_scheduler = DDPMScheduler(**noise_scheduler)
-        else:
-            raise TypeError(f"noise_scheduler must be a DDPMScheduler instance or a dict of kwargs, got {type(noise_scheduler)}")
+        self.model = model
+        self.noise_scheduler = noise_scheduler
         self.mask_generator = LowdimMaskGenerator(
             action_dim=action_dim,
             obs_dim=0 if (obs_as_local_cond or obs_as_global_cond) else obs_dim,
@@ -138,6 +57,7 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         if num_inference_steps is None:
             num_inference_steps = noise_scheduler.config.num_train_timesteps
         self.num_inference_steps = num_inference_steps
+    
     # ========= inference  ============
     def conditional_sample(self, 
             condition_data, condition_mask,
@@ -161,11 +81,6 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         for t in scheduler.timesteps:
             # 1. apply conditioning
             trajectory[condition_mask] = condition_data[condition_mask]
-            # if self.condition_trajectory and self.env is not None:
-            #     unnormalized_trajectory = self.normalizer['action'].unnormalize(trajectory)
-            #     # unnormalized_trajectory[~condition_mask] = self.env.ensure_valid_trajectory(unnormalized_trajectory[~condition_mask])
-            #     unnormalized_trajectory = self.env.ensure_valid_trajectory(unnormalized_trajectory)
-            #     trajectory = self.normalizer['action'].normalize(unnormalized_trajectory)
 
             # 2. predict model output
             model_output = model(trajectory, t, 
@@ -203,7 +118,6 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
 
         assert 'obs' in obs_dict
         assert 'past_action' not in obs_dict # not implemented yet
-
         nobs = self.normalizer['obs'].normalize(obs_dict['obs'])
         B, _, Do = nobs.shape
         To = self.n_obs_steps

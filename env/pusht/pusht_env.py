@@ -12,6 +12,7 @@ import cv2
 import skimage.transform as st
 from diffusion_policy.env.pusht.pymunk_override import DrawOptions
 
+
 def pymunk_to_shapely(body, shapes):
     geoms = list()
     for shape in shapes:
@@ -83,7 +84,7 @@ class PushTEnv(gym.Env):
         self.latest_action = None
         self.reset_to_state = reset_to_state
     
-    def reset(self, seed=None): # seed is for compatibility with gym API
+    def reset(self):
         seed = self._seed
         self._setup()
         if self.block_cog is not None:

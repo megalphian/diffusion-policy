@@ -121,8 +121,23 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
         )
 
         # configure checkpoint
+        # allow overriding the checkpoint directory via cfg.checkpoint.save_dir
+        checkpoint_save_dir = None
+        if 'save_dir' in cfg.checkpoint:
+            # expand base save_dir and append job_id subdirectory if provided
+            base_save_dir = os.path.expanduser(str(cfg.checkpoint.save_dir))
+            if 'job_id' in cfg.training:
+                checkpoint_save_dir = os.path.join(base_save_dir, str(cfg.training.job_id))
+            else:
+                checkpoint_save_dir = base_save_dir
+            # ensure the checkpoint directory exists
+            os.makedirs(checkpoint_save_dir, exist_ok=True)
+        else:
+            checkpoint_save_dir = os.path.join(self.output_dir, 'checkpoints')
+            os.makedirs(checkpoint_save_dir, exist_ok=True)
+
         topk_manager = TopKCheckpointManager(
-            save_dir=os.path.join(self.output_dir, 'checkpoints'),
+            save_dir=checkpoint_save_dir,
             **cfg.checkpoint.topk
         )
 
