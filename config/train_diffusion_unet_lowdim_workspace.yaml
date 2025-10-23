@@ -30,10 +30,10 @@ ema_target: EMAModel
 optimizer_target: AdamW
 
 policy:
-  # _target_: diffusion_policy.policy.diffusion_unet_lowdim_policy.DiffusionUnetLowdimPolicy
+  _target_: diffusion_policy.policy.diffusion_unet_lowdim_policy.DiffusionUnetLowdimPolicy
 
   model:
-    # _target_: diffusion_policy.model.diffusion.conditional_unet1d.ConditionalUnet1D
+    _target_: diffusion_policy.model.conditional_unet1d.ConditionalUnet1D
     input_dim: "${eval: ${task.action_dim} if ${obs_as_local_cond} or ${obs_as_global_cond} else ${task.obs_dim} + ${task.action_dim}}"
     local_cond_dim: "${eval: ${task.obs_dim} if ${obs_as_local_cond} else None}"
     global_cond_dim: "${eval: ${task.obs_dim}*${n_obs_steps} if ${obs_as_global_cond} else None}"
@@ -44,7 +44,7 @@ policy:
     cond_predict_scale: True
   
   noise_scheduler:
-    # _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+    _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
     num_train_timesteps: 100
     beta_start: 0.0001
     beta_end: 0.02
@@ -68,7 +68,7 @@ policy:
   # predict_epsilon: True
 
 ema:
-  # _target_: diffusion_policy.model.diffusion.ema_model.EMAModel
+  _target_: diffusers.training_utils.EMAModel
   update_after_step: 0
   inv_gamma: 1.0
   power: 0.75
@@ -90,7 +90,7 @@ val_dataloader:
   persistent_workers: False
 
 optimizer:
-  # _target_: torch.optim.AdamW
+  _target_: torch.optim.AdamW
   lr: 1.0e-4
   betas: [0.95, 0.999]
   eps: 1.0e-8

@@ -38,8 +38,7 @@ tensorboardX==2.5.1
 wandb==0.13.3
 
 # RL, robotics, and simulation
-# gym==0.21.0
-gym==0.23.1
+gym==0.21.0
 pygame==2.5.2
 # pybullet-svl==3.1.6.4
 pymunk==6.2.1

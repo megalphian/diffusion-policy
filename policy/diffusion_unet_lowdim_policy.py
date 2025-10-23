@@ -98,10 +98,22 @@ class DiffusionUnetLowdimPolicy(BaseLowdimPolicy):
         assert not (obs_as_local_cond and obs_as_global_cond)
         if pred_action_steps_only:
             assert obs_as_global_cond
-        # self.model = model
-        self.model = ConditionalUnet1D(**model)
-        # self.noise_scheduler = noise_scheduler
-        self.noise_scheduler = DDPMScheduler(**noise_scheduler)
+        # model may be passed as either a constructed ConditionalUnet1D (or nn.Module)
+        # or as a mapping of kwargs to construct one. Handle both cases.
+        if isinstance(model, ConditionalUnet1D) or isinstance(model, nn.Module):
+            self.model = model
+        elif isinstance(model, dict):
+            self.model = ConditionalUnet1D(**model)
+        else:
+            raise TypeError(f"model must be a ConditionalUnet1D/nn.Module or a dict of kwargs, got {type(model)}")
+
+        # noise_scheduler may also be provided as an instance or a mapping
+        if isinstance(noise_scheduler, DDPMScheduler):
+            self.noise_scheduler = noise_scheduler
+        elif isinstance(noise_scheduler, dict):
+            self.noise_scheduler = DDPMScheduler(**noise_scheduler)
+        else:
+            raise TypeError(f"noise_scheduler must be a DDPMScheduler instance or a dict of kwargs, got {type(noise_scheduler)}")
         self.mask_generator = LowdimMaskGenerator(
             action_dim=action_dim,
             obs_dim=0 if (obs_as_local_cond or obs_as_global_cond) else obs_dim,

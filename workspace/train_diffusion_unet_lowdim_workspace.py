@@ -1,150 +1,42 @@
-from typing import Dict
-import pathlib
-import copy
-import dill
-import torch
-from torch.utils.data import DataLoader
-import threading
+if __name__ == "__main__":
+    import sys
+    import os
+    import pathlib
+
+    ROOT_DIR = str(pathlib.Path(__file__).parent.parent.parent)
+    sys.path.append(ROOT_DIR)
+    os.chdir(ROOT_DIR)
+
 import os
+import hydra
+import torch
+from omegaconf import OmegaConf
+import pathlib
+from torch.utils.data import DataLoader
+import copy
 import numpy as np
 import random
 import wandb
 import tqdm
-from hydra import initialize, compose
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import OmegaConf
-from diffusers.optimization import (
-    Union, SchedulerType, Optional,
-    Optimizer, TYPE_TO_SCHEDULER_FUNCTION
-)
+import shutil
+
+from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
+from diffusion_policy.workspace.base_workspace import BaseWorkspace
+from diffusion_policy.policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
+from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
+from diffusion_policy.runner.base_lowdim_runner import BaseLowdimRunner
+from diffusion_policy.common.checkpoint_util import TopKCheckpointManager
+from diffusion_policy.common.json_logger import JsonLogger
+from diffusion_policy.model.common.lr_scheduler import get_scheduler
 from diffusers.training_utils import EMAModel
 
-# Diffusion Policy imports
-from diffusion_policy.policy.diffusion_unet_lowdim_policy import DiffusionUnetLowdimPolicy
-from diffusion_policy.dataset.pusht_dataset import PushTLowdimDataset
-from diffusion_policy.workspace.base_workspace import BaseWorkspace
-from diffusion_policy.runner.base_lowdim_runner import BaseLowdimRunner
-from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
-from diffusion_policy.common.json_logger import JsonLogger
-from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
-from diffusion_policy.runner.pusht_keypoints_runner import PushTKeypointsRunner
-from diffusion_policy.util.ema_model import EMAModel
+OmegaConf.register_new_resolver("eval", eval, replace=True)
 
-from diffusion_policy.dataset.box_delivery_dataset import BoxDeliveryLowdimDataset
-from diffusion_policy.dataset.coverage_dataset import CoverageDataset
-
-def load_and_evaluate_yaml(config_path, config_name):
-    # Initialize Hydra with the directory containing the YAML file
-    with initialize(config_path=config_path):
-        # Compose the configuration
-        cfg = compose(config_name=config_name)
-        # Convert to a dictionary for easier access
-        return OmegaConf.to_container(cfg, resolve=True)
-
-def get_scheduler(
-    name: Union[str, SchedulerType],
-    optimizer: Optimizer,
-    num_warmup_steps: Optional[int] = None,
-    num_training_steps: Optional[int] = None,
-    **kwargs
-):
-    """
-    Added kwargs vs diffuser's original implementation
-
-    Unified API to get any scheduler from its name.
-
-    Args:
-        name (`str` or `SchedulerType`):
-            The name of the scheduler to use.
-        optimizer (`torch.optim.Optimizer`):
-            The optimizer that will be used during training.
-        num_warmup_steps (`int`, *optional*):
-            The number of warmup steps to do. This is not required by all schedulers (hence the argument being
-            optional), the function will raise an error if it's unset and the scheduler type requires it.
-        num_training_steps (`int``, *optional*):
-            The number of training steps to do. This is not required by all schedulers (hence the argument being
-            optional), the function will raise an error if it's unset and the scheduler type requires it.
-    """
-    name = SchedulerType(name)
-    schedule_func = TYPE_TO_SCHEDULER_FUNCTION[name]
-    if name == SchedulerType.CONSTANT:
-        return schedule_func(optimizer, **kwargs)
-
-    # All other schedulers require `num_warmup_steps`
-    if num_warmup_steps is None:
-        raise ValueError(f"{name} requires `num_warmup_steps`, please provide that argument.")
-
-    if name == SchedulerType.CONSTANT_WITH_WARMUP:
-        return schedule_func(optimizer, num_warmup_steps=num_warmup_steps, **kwargs)
-
-    # All other schedulers require `num_training_steps`
-    if num_training_steps is None:
-        raise ValueError(f"{name} requires `num_training_steps`, please provide that argument.")
-
-    return schedule_func(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=num_training_steps, **kwargs)
-
-
-class TopKCheckpointManager:
-    def __init__(self,
-            save_dir,
-            monitor_key: str,
-            mode='min',
-            k=1,
-            format_str='epoch={epoch:03d}-train_loss={train_loss:.3f}.ckpt'
-        ):
-        assert mode in ['max', 'min']
-        assert k >= 0
-
-        self.save_dir = save_dir
-        self.monitor_key = monitor_key
-        self.mode = mode
-        self.k = k
-        self.format_str = format_str
-        self.path_value_map = dict()
-    
-    def get_ckpt_path(self, data: Dict[str, float]) -> Optional[str]:
-        if self.k == 0:
-            return None
-
-        value = data[self.monitor_key]
-        ckpt_path = os.path.join(
-            self.save_dir, self.format_str.format(**data))
-        
-        if len(self.path_value_map) < self.k:
-            # under-capacity
-            self.path_value_map[ckpt_path] = value
-            return ckpt_path
-        
-        # at capacity
-        sorted_map = sorted(self.path_value_map.items(), key=lambda x: x[1])
-        min_path, min_value = sorted_map[0]
-        max_path, max_value = sorted_map[-1]
-
-        delete_path = None
-        if self.mode == 'max':
-            if value > min_value:
-                delete_path = min_path
-        else:
-            if value < max_value:
-                delete_path = max_path
-
-        if delete_path is None:
-            return None
-        else:
-            del self.path_value_map[delete_path]
-            self.path_value_map[ckpt_path] = value
-
-            if not os.path.exists(self.save_dir):
-                os.mkdir(self.save_dir)
-
-            if os.path.exists(delete_path):
-                os.remove(delete_path)
-            return ckpt_path
-
+# %%
 class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
     include_keys = ['global_step', 'epoch']
 
-    def __init__(self, cfg, output_dir=None):
+    def __init__(self, cfg: OmegaConf, output_dir=None):
         super().__init__(cfg, output_dir=output_dir)
 
         # set seed
@@ -155,18 +47,15 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
 
         # configure model
         self.model: DiffusionUnetLowdimPolicy
-        # self.model = hydra.utils.instantiate(cfg.policy)
-        self.model = DiffusionUnetLowdimPolicy(**cfg.policy)
+        self.model = hydra.utils.instantiate(cfg.policy)
 
         self.ema_model: DiffusionUnetLowdimPolicy = None
         if cfg.training.use_ema:
             self.ema_model = copy.deepcopy(self.model)
 
         # configure training state
-        # self.optimizer = hydra.utils.instantiate(
-        #     cfg.optimizer, params=self.model.parameters())
-        if cfg.optimizer_target == "AdamW":
-            self.optimizer = torch.optim.AdamW(params=self.model.parameters(), **cfg.optimizer)
+        self.optimizer = hydra.utils.instantiate(
+            cfg.optimizer, params=self.model.parameters())
 
         self.global_step = 0
         self.epoch = 0
@@ -176,33 +65,14 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
 
         # resume training
         if cfg.training.resume:
-            if cfg.training.start_from_pretrained:
-                lastest_ckpt_path = pathlib.Path(cfg.training.pretrained_model_path)
-            else:
-                lastest_ckpt_path = self.get_checkpoint_path()
-
+            lastest_ckpt_path = self.get_checkpoint_path()
             if lastest_ckpt_path.is_file():
                 print(f"Resuming from checkpoint {lastest_ckpt_path}")
                 self.load_checkpoint(path=lastest_ckpt_path)
 
-                # Reset training state when starting from pretrained model
-                if cfg.training.start_from_pretrained:
-                    print("Starting from pretrained model, resetting training state.")
-                    self.epoch = 0
-                    self.global_step = 0
-            else:
-                print("No checkpoint found, starting from scratch.")
         # configure dataset
         dataset: BaseLowdimDataset
-        # dataset = hydra.utils.instantiate(cfg.task.dataset)
-        if cfg.task.dataset_target == "PushTLowdimDataset":
-            dataset = PushTLowdimDataset(**cfg.task.dataset)
-        elif cfg.task.dataset_target == "BoxDeliveryLowdimDataset":
-            dataset = BoxDeliveryLowdimDataset(**cfg.task.dataset)
-        elif cfg.task.dataset_target == "CoverageDataset":
-            dataset = CoverageDataset(**cfg.task.dataset)
-
-        print(f"Dataset: {dataset}")
+        dataset = hydra.utils.instantiate(cfg.task.dataset)
         assert isinstance(dataset, BaseLowdimDataset)
         train_dataloader = DataLoader(dataset, **cfg.dataloader)
         normalizer = dataset.get_normalizer()
@@ -228,21 +98,15 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
             last_epoch=self.global_step-1
         )
 
-        # configure ema
+        # configure ema (instantiate after device transfer below)
         ema: EMAModel = None
-        if cfg.training.use_ema:
-            # ema = hydra.utils.instantiate(
-            #     cfg.ema,
-            #     model=self.ema_model)
-            ema = EMAModel(model=self.ema_model, **cfg.ema)
 
         # configure env runner
-        # env_runner: BaseLowdimRunner
-        # # env_runner = hydra.utils.instantiate(
-        # #     cfg.task.env_runner,
-        # #     output_dir=self.output_dir)
-        # env_runner = PushTKeypointsRunner(output_dir=self.output_dir, **cfg.task.env_runner)
-        # assert isinstance(env_runner, BaseLowdimRunner)
+        env_runner: BaseLowdimRunner
+        env_runner = hydra.utils.instantiate(
+            cfg.task.env_runner,
+            output_dir=self.output_dir)
+        assert isinstance(env_runner, BaseLowdimRunner)
 
         # configure logging
         wandb_run = wandb.init(
@@ -257,15 +121,10 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
         )
 
         # configure checkpoint
-        # topk_manager = TopKCheckpointManager(
-        #     save_dir=os.path.join(self.output_dir, 'checkpoints'),
-        #     **cfg.checkpoint.topk
-        # )
         topk_manager = TopKCheckpointManager(
-            save_dir=os.path.join('PositionDiffusionPolicy/checkpoint/', str(self.cfg.training.job_id)),
+            save_dir=os.path.join(self.output_dir, 'checkpoints'),
             **cfg.checkpoint.topk
         )
-
 
         # device transfer
         device = torch.device(cfg.training.device)
@@ -273,6 +132,13 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
         if self.ema_model is not None:
             self.ema_model.to(device)
         optimizer_to(self.optimizer, device)
+
+        # instantiate EMAModel after models are on the correct device
+        if cfg.training.use_ema:
+            # create EMAModel backing object using the ema_model which has been moved to device
+            ema = hydra.utils.instantiate(
+                cfg.ema,
+                model=self.ema_model)
 
         # save batch for sampling
         train_sampling_batch = None
@@ -350,10 +216,10 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
                 policy.eval()
 
                 # run rollout
-                # if (self.epoch % cfg.training.rollout_every) == 0:
-                #     runner_log = env_runner.run(policy)
-                #     # log all
-                #     step_log.update(runner_log)
+                if (self.epoch % cfg.training.rollout_every) == 0:
+                    runner_log = env_runner.run(policy)
+                    # log all
+                    step_log.update(runner_log)
 
                 # run validation
                 if (self.epoch % cfg.training.val_every) == 0:
@@ -431,10 +297,10 @@ class TrainDiffusionUnetLowdimWorkspace(BaseWorkspace):
                 self.global_step += 1
                 self.epoch += 1
 
-# @hydra.main(
-#     version_base=None,
-#     config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")), 
-#     config_name=pathlib.Path(__file__).stem)
+@hydra.main(
+    version_base=None,
+    config_path=str(pathlib.Path(__file__).parent.parent.joinpath("config")), 
+    config_name=pathlib.Path(__file__).stem)
 def main(cfg):
     workspace = TrainDiffusionUnetLowdimWorkspace(cfg)
     workspace.run()
