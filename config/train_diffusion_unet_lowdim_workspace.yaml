@@ -68,7 +68,7 @@ policy:
   # predict_epsilon: True
 
 ema:
-  _target_: diffusers.training_utils.EMAModel
+  _target_: diffusion_policy.model.common.ema_model.EMAModel
   update_after_step: 0
   inv_gamma: 1.0
   power: 0.75

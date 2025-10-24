@@ -126,9 +126,13 @@ class PushTEnv(gym.Env):
         goal_geom = pymunk_to_shapely(goal_body, self.block.shapes)
         block_geom = pymunk_to_shapely(self.block, self.block.shapes)
 
-        intersection_area = goal_geom.intersection(block_geom).area
         goal_area = goal_geom.area
-        coverage = intersection_area / goal_area
+        if (goal_area is None) or (not np.isfinite(goal_area)) or goal_area <= 0:
+            coverage = 0.0
+        else:
+            # compute intersection and avoid division by zero / invalid area
+            intersection_area = goal_geom.intersection(block_geom).area
+            coverage = intersection_area / goal_area
         reward = np.clip(coverage / self.success_threshold, 0, 1)
         done = coverage > self.success_threshold
 

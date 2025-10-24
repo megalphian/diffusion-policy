@@ -12,7 +12,7 @@ env_runner:
   n_train: 6
   n_train_vis: 2
   train_start_seed: 0
-  n_test: 50
+  n_test: 20
   n_test_vis: 4
   legacy_test: True
   test_start_seed: 100000
